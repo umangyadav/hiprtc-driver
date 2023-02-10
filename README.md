@@ -14,7 +14,7 @@ Currently this only works for MIGraphX. Logic is hardcoded in some places.
 `make`
 
 
-## how to use it with MIGrpahX ? 
+## how to use it with MIGraphX ? 
 Checkout `hiprtc_driver` branch of MIGraphX. 
 
 Change path of `hiprtc-driver` executable here : https://github.com/ROCmSoftwarePlatform/AMDMIGraphX/blob/082115452b48a4aa768d9a704dc5103fac28decb/src/targets/gpu/compile_hip.cpp#L256
