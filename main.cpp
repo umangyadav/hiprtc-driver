@@ -9,6 +9,46 @@
 
 namespace fs = std::experimental::filesystem;
 
+
+fs::path relativePath( const fs::path &path, const fs::path &relative_to )
+{
+    // create absolute paths
+    fs::path p = fs::absolute(path);
+    fs::path r = fs::absolute(relative_to);
+
+    // if root paths are different, return absolute path
+    if( p.root_path() != r.root_path() )
+        return p;
+
+    // initialize relative path
+    fs::path result;
+
+    // find out where the two paths diverge
+    fs::path::const_iterator itr_path = p.begin();
+    fs::path::const_iterator itr_relative_to = r.begin();
+    while( itr_path != p.end() && itr_relative_to != r.end() && *itr_path == *itr_relative_to ) {
+        ++itr_path;
+        ++itr_relative_to;
+    }
+
+    // add "../" for each remaining token in relative_to
+    if( itr_relative_to != r.end() ) {
+        ++itr_relative_to;
+        while( itr_relative_to != r.end() ) {
+            result /= "..";
+            ++itr_relative_to;
+        }
+    }
+
+    // add remaining path
+    while( itr_path != p.end() ) {
+        result /= *itr_path;
+        ++itr_path;
+    }
+
+    return result;
+}
+
 template <class T>
 T generic_read_file(const std::string& filename, size_t offset = 0, size_t nbytes = 0)
 {
@@ -108,6 +148,7 @@ struct hiprtc_program
         {
             std::string content = src.contents;
             std::string path = src.path.string();
+			std::cout <<"path in src: " << path << "\n";
             if(src.path.extension().string() == ".cpp")
             {
                 output_buffer = src.path.stem().string()+".o";
@@ -120,11 +161,14 @@ struct hiprtc_program
                 include_names.push_back(std::move(path));
             }
         }
-        prog = hiprtc_program_create(cpp_src.c_str(),
+		std::cout << "done creating buffers\n";
+		prog = hiprtc_program_create(cpp_src.c_str(),
                                      cpp_name.c_str(),
                                      headers.size(),
                                      headers.data(),
                                      include_names.data());
+		std::cout <<"program creation done\n";
+
     }
 
     void compile(const std::vector<std::string>& options)
@@ -135,6 +179,7 @@ struct hiprtc_program
                        std::back_inserter(c_options),
                        [](const std::string& s) { return s.c_str(); });
         auto result   = hiprtcCompileProgram(prog, c_options.size(), c_options.data());
+		std::cout << "compilation done\n";
         auto compile_log = log();
         if(!compile_log.empty()) {
             std::cout << compile_log << std::endl;
@@ -182,17 +227,13 @@ int main(int argc, char **argv)
             continue;
         }
         std::string filename = file_path.filename().string();
+		fs::path relative_path = relativePath(file_path, current_path);
+		std::cout << "relative_path: " << relative_path << std::endl;
         std::string contents = read_buffer(file_path.string());
-        fs::path tmp_file_path = fs::path("migraphx") / "kernels" / filename;
-        fs::path parent_path = file_path.parent_path();
-        if(filename == "args.hpp" && parent_path == current_path) {
-            tmp_file_path = fs::path(filename);
-        } else if (filename == "main.cpp") {
-            tmp_file_path = fs::path(filename);
-        }
-        src_file tmp{tmp_file_path, contents};
+        src_file tmp{relative_path, contents};
         srcs.push_back(tmp);
     }
+	std::cout << "done pushing srcs\n";
     hiprtc_program prog{srcs};
     prog.compile(compile_options);
     return 0;
