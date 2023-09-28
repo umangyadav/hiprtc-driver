@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <deque>
 #include <algorithm>
 #include <experimental/filesystem>
 #include <fstream>
@@ -119,7 +120,7 @@ struct hiprtc_program
 {
     struct string_array
     {
-        std::vector<std::string> strings{};
+        std::deque<std::string> strings{};
         std::vector<const char*> c_strs{};
 
         string_array() {}
@@ -148,7 +149,6 @@ struct hiprtc_program
         {
             std::string content = src.contents;
             std::string path = src.path.string();
-			std::cout <<"path in src: " << path << "\n";
             if(src.path.extension().string() == ".cpp")
             {
                 output_buffer = src.path.stem().string()+".o";
@@ -161,14 +161,11 @@ struct hiprtc_program
                 include_names.push_back(std::move(path));
             }
         }
-		std::cout << "done creating buffers\n";
 		prog = hiprtc_program_create(cpp_src.c_str(),
                                      cpp_name.c_str(),
                                      headers.size(),
                                      headers.data(),
                                      include_names.data());
-		std::cout <<"program creation done\n";
-
     }
 
     void compile(const std::vector<std::string>& options)
@@ -179,10 +176,11 @@ struct hiprtc_program
                        std::back_inserter(c_options),
                        [](const std::string& s) { return s.c_str(); });
         auto result   = hiprtcCompileProgram(prog, c_options.size(), c_options.data());
-		std::cout << "compilation done\n";
         auto compile_log = log();
         if(!compile_log.empty()) {
             std::cout << compile_log << std::endl;
+        } else {
+			std::cout << "compilation done\n";
         }
         dump_code_obj(); 
         if(result != HIPRTC_SUCCESS) {
@@ -228,12 +226,11 @@ int main(int argc, char **argv)
         }
         std::string filename = file_path.filename().string();
 		fs::path relative_path = relativePath(file_path, current_path);
-		std::cout << "relative_path: " << relative_path << std::endl;
+		//std::cout << "relative_path: " << relative_path << std::endl;
         std::string contents = read_buffer(file_path.string());
         src_file tmp{relative_path, contents};
         srcs.push_back(tmp);
     }
-	std::cout << "done pushing srcs\n";
     hiprtc_program prog{srcs};
     prog.compile(compile_options);
     return 0;
