@@ -10,39 +10,42 @@
 
 namespace fs = std::experimental::filesystem;
 
-
-fs::path relativePath( const fs::path &path, const fs::path &relative_to )
+fs::path relativePath(const fs::path& path, const fs::path& relative_to)
 {
     // create absolute paths
     fs::path p = fs::absolute(path);
     fs::path r = fs::absolute(relative_to);
 
     // if root paths are different, return absolute path
-    if( p.root_path() != r.root_path() )
+    if(p.root_path() != r.root_path())
         return p;
 
     // initialize relative path
     fs::path result;
 
     // find out where the two paths diverge
-    fs::path::const_iterator itr_path = p.begin();
+    fs::path::const_iterator itr_path        = p.begin();
     fs::path::const_iterator itr_relative_to = r.begin();
-    while( itr_path != p.end() && itr_relative_to != r.end() && *itr_path == *itr_relative_to ) {
+    while(itr_path != p.end() && itr_relative_to != r.end() && *itr_path == *itr_relative_to)
+    {
         ++itr_path;
         ++itr_relative_to;
     }
 
     // add "../" for each remaining token in relative_to
-    if( itr_relative_to != r.end() ) {
+    if(itr_relative_to != r.end())
+    {
         ++itr_relative_to;
-        while( itr_relative_to != r.end() ) {
+        while(itr_relative_to != r.end())
+        {
             result /= "..";
             ++itr_relative_to;
         }
     }
 
     // add remaining path
-    while( itr_path != p.end() ) {
+    while(itr_path != p.end())
+    {
         result /= *itr_path;
         ++itr_path;
     }
@@ -59,27 +62,30 @@ T generic_read_file(const std::string& filename, size_t offset = 0, size_t nbyte
         // if there is a non-zero offset and nbytes is not set,
         // calculate size of remaining bytes to read
         nbytes = is.tellg();
-        if(offset > nbytes) {
+        if(offset > nbytes)
+        {
             std::cout << "error 1\n";
             throw "offset is larger than file size";
         }
         nbytes -= offset;
     }
-    if(nbytes < 1) {
+    if(nbytes < 1)
+    {
         std::cout << "error2 \n";
         throw "Invalid size for: " + filename;
     }
     is.seekg(offset, std::ios::beg);
 
     T buffer(nbytes, 0);
-    if(not is.read(&buffer[0], nbytes)) {
+    if(not is.read(&buffer[0], nbytes))
+    {
         std::cout << "erorr 3\n";
         throw "Error reading file: " + filename;
     }
     return buffer;
 }
 
-std::string read_buffer(const std::string& filename, size_t offset=0, size_t nbytes=0)
+std::string read_buffer(const std::string& filename, size_t offset = 0, size_t nbytes = 0)
 {
     return generic_read_file<std::string>(filename, offset, nbytes);
 }
@@ -109,7 +115,8 @@ hiprtc_program_ptr hiprtc_program_create(Ts... xs)
 {
     hiprtcProgram prog = nullptr;
     auto result        = hiprtcCreateProgram(&prog, xs...);
-    if(result != HIPRTC_SUCCESS) {
+    if(result != HIPRTC_SUCCESS)
+    {
         std::cout << "error0\n";
         throw "Create program failed.";
     }
@@ -140,20 +147,20 @@ struct hiprtc_program
     hiprtc_program_ptr prog = nullptr;
     string_array headers{};
     string_array include_names{};
-    std::string cpp_src  = "";
-    std::string cpp_name = "";
+    std::string cpp_src       = "";
+    std::string cpp_name      = "";
     std::string output_buffer = "";
     hiprtc_program(const std::vector<src_file>& srcs)
     {
         for(auto&& src : srcs)
         {
             std::string content = src.contents;
-            std::string path = src.path.string();
+            std::string path    = src.path.string();
             if(src.path.extension().string() == ".cpp")
             {
-                output_buffer = src.path.stem().string()+".o";
-                cpp_src  = std::move(content);
-                cpp_name = std::move(path);
+                output_buffer = src.path.stem().string() + ".o";
+                cpp_src       = std::move(content);
+                cpp_name      = std::move(path);
             }
             else
             {
@@ -161,7 +168,7 @@ struct hiprtc_program
                 include_names.push_back(std::move(path));
             }
         }
-		prog = hiprtc_program_create(cpp_src.c_str(),
+        prog = hiprtc_program_create(cpp_src.c_str(),
                                      cpp_name.c_str(),
                                      headers.size(),
                                      headers.data(),
@@ -175,13 +182,15 @@ struct hiprtc_program
                        options.end(),
                        std::back_inserter(c_options),
                        [](const std::string& s) { return s.c_str(); });
-        auto result   = hiprtcCompileProgram(prog, c_options.size(), c_options.data());
+        auto result      = hiprtcCompileProgram(prog, c_options.size(), c_options.data());
         auto compile_log = log();
-        if(!compile_log.empty()) {
+        if(!compile_log.empty())
+        {
             std::cout << compile_log << std::endl;
-        }         
-		dump_code_obj(); 
-        if(result != HIPRTC_SUCCESS) {
+        }
+        dump_code_obj();
+        if(result != HIPRTC_SUCCESS)
+        {
             std::cout << "compilation failed:\n";
             throw "Compilation failed.";
         }
@@ -209,22 +218,25 @@ struct hiprtc_program
     }
 };
 
-int main(int argc, char **argv) 
+int main(int argc, char** argv)
 {
     fs::path current_path = fs::current_path();
     std::vector<std::string> compile_options;
-    for(int i = 1; i < argc; i++) {
+    for(int i = 1; i < argc; i++)
+    {
         compile_options.push_back(std::string(argv[i]));
     }
     std::vector<src_file> srcs;
-    for(const fs::directory_entry& dir_file : fs::recursive_directory_iterator(current_path)) {
-        fs::path file_path  = dir_file.path();
-        if(fs::is_directory(file_path)) {
+    for(const fs::directory_entry& dir_file : fs::recursive_directory_iterator(current_path))
+    {
+        fs::path file_path = dir_file.path();
+        if(fs::is_directory(file_path))
+        {
             continue;
         }
-        std::string filename = file_path.filename().string();
-		fs::path relative_path = relativePath(file_path, current_path);
-        std::string contents = read_buffer(file_path.string());
+        std::string filename   = file_path.filename().string();
+        fs::path relative_path = relativePath(file_path, current_path);
+        std::string contents   = read_buffer(file_path.string());
         src_file tmp{relative_path, contents};
         srcs.push_back(tmp);
     }
