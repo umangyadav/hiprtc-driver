@@ -179,10 +179,8 @@ struct hiprtc_program
         auto compile_log = log();
         if(!compile_log.empty()) {
             std::cout << compile_log << std::endl;
-        } else {
-			std::cout << "compilation done\n";
-        }
-        dump_code_obj(); 
+        }         
+		dump_code_obj(); 
         if(result != HIPRTC_SUCCESS) {
             std::cout << "compilation failed:\n";
             throw "Compilation failed.";
@@ -226,7 +224,6 @@ int main(int argc, char **argv)
         }
         std::string filename = file_path.filename().string();
 		fs::path relative_path = relativePath(file_path, current_path);
-		//std::cout << "relative_path: " << relative_path << std::endl;
         std::string contents = read_buffer(file_path.string());
         src_file tmp{relative_path, contents};
         srcs.push_back(tmp);
